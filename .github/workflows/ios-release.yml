@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install build tools
         run: brew install xcodegen imagemagick
-      - name: Materialize original TankTime icon
+      - name: Materialize premium TankTime icon
         run: bash scripts/materialize_app_icon.sh
       - name: Generate project
         run: xcodegen generate
@@ -132,8 +132,8 @@ jobs:
           echo "$ASC_API_KEY_BASE64" | base64 --decode > "$KEY"
           IPA=$(find "$PWD/artifacts/export" -name '*.ipa' -print -quit)
           xcrun altool --upload-app --type ios --file "$IPA" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
-      - name: Cleanup ephemeral signing assets after failure
-        if: failure()
+      - name: Cleanup ephemeral signing assets
+        if: always()
         continue-on-error: true
         run: python3 scripts/apple_ephemeral_signing.py cleanup
       - uses: actions/upload-artifact@v4
