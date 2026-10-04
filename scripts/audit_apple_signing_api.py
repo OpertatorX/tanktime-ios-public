@@ -12,8 +12,8 @@ def get(path, params=None):
     if r.status_code != 200:
         print(r.text[:1200]); raise SystemExit(2)
     return r.json().get('data', [])
-certs = get('/v1/certificates', {'filter[certificateType]': 'DISTRIBUTION', 'limit': 200})
-print('DISTRIBUTION_CERT_COUNT', len(certs))
+certs = get('/v1/certificates', {'filter[certificateType]': 'IOS_DISTRIBUTION', 'limit': 200})
+print('IOS_DISTRIBUTION_CERT_COUNT', len(certs))
 for c in certs:
     a = c.get('attributes', {})
     print('CERT', c.get('id'), a.get('displayName'), a.get('serialNumber'), a.get('expirationDate'), a.get('activated'))
@@ -24,4 +24,6 @@ print('PROFILE_COUNT', len(profiles))
 for p in profiles:
     a = p.get('attributes', {})
     print('PROFILE', p.get('id'), a.get('name'), a.get('profileState'), a.get('expirationDate'))
+pcerts = get('/v1/profiles/6JW3QXFP6R/certificates', {'limit': 50})
+print('PROFILE_CERTS', [(c.get('id'), c.get('attributes', {}).get('serialNumber')) for c in pcerts])
 print('PASS: provisioning API access is available.')
