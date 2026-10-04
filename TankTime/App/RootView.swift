@@ -73,20 +73,40 @@ struct RootView: View {
             AppTheme.backdrop.ignoresSafeArea()
 
             TabView(selection: $selection) {
-                NavigationStack { CalculatorView() }
-                    .tag(AppTab.calculate)
+                NavigationStack {
+                    CalculatorView()
+                        .frame(maxWidth: 840)
+                        .frame(maxWidth: .infinity)
+                }
+                .tag(AppTab.calculate)
 
-                NavigationStack { PlannerView() }
-                    .tag(AppTab.plan)
+                NavigationStack {
+                    PlannerView()
+                        .frame(maxWidth: 840)
+                        .frame(maxWidth: .infinity)
+                }
+                .tag(AppTab.plan)
 
-                NavigationStack { TanksView() }
-                    .tag(AppTab.tanks)
+                NavigationStack {
+                    TanksView()
+                        .frame(maxWidth: 840)
+                        .frame(maxWidth: .infinity)
+                }
+                .tag(AppTab.tanks)
 
-                NavigationStack { HistoryView() }
-                    .tag(AppTab.history)
+                NavigationStack {
+                    HistoryView()
+                        .frame(maxWidth: 840)
+                        .frame(maxWidth: .infinity)
+                }
+                .tag(AppTab.history)
 
-                NavigationStack { SettingsView() }
-                    .tag(AppTab.settings)
+                NavigationStack {
+                    SettingsView()
+                        .frame(maxWidth: 840)
+                        .frame(maxWidth: .infinity)
+                }
+                .tag(AppTab.settings)
             }
             .toolbar(.hidden, for: .tabBar)
         }
@@ -141,6 +161,8 @@ private struct PremiumTabBar: View {
         .padding(.horizontal, 12)
         .padding(.top, 9)
         .padding(.bottom, 7)
+        .frame(maxWidth: 840)
+        .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
         .overlay(alignment: .top) {
             Rectangle()
