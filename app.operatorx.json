@@ -1,36 +1,36 @@
 {
-    "schemaVersion":  2,
-    "factoryMode":  "App Factory Ads",
-    "name":  "TankTime",
-    "slug":  "tanktime",
-    "bundleId":  "com.operatorx.tanktime",
-    "version":  "1.0.0",
-    "build":  1,
-    "platform":  "ios-native",
-    "stack":  "SwiftUI",
-    "deploymentTarget":  "17.0",
-    "locales":  [
-                    "fr-FR",
-                    "en-US"
-                ],
-    "monetization":  {
-                         "type":  "admob",
-                         "formats":  [
-                                         "banner",
-                                         "interstitial"
-                                     ],
-                         "interstitialCadence":  "after every 4 saved calculations",
-                         "umpRequired":  true,
-                         "att":  "only-if-production-tracking-enabled"
-                     },
-    "releaseGates":  [
-                         "production-admob-ids",
-                         "no-test-ids-in-release",
-                         "ump-before-ad-request",
-                         "app-privacy-aligned",
-                         "apple-4.3-recheck",
-                         "fr-en-screenshots",
-                         "iphone-ipad-qa"
-                     ],
-    "website":  "https://operatorx-tanktime.vercel.app/"
+  "schemaVersion": 2,
+  "factoryMode": "App Factory Ads",
+  "name": "TankTime",
+  "slug": "tanktime",
+  "bundleId": "com.operatorx.tanktime",
+  "version": "1.0.0",
+  "build": 1,
+  "platform": "ios-native",
+  "stack": "SwiftUI",
+  "deploymentTarget": "17.0",
+  "locales": ["fr-FR", "en-US"],
+  "monetization": {
+    "type": "admob",
+    "formats": ["banner", "interstitial"],
+    "interstitialCadence": "after every 4 saved calculations",
+    "umpRequired": true,
+    "att": true,
+    "startupOrder": "UMP -> ATT -> Google Mobile Ads",
+    "publisherPersonalization": "disabled",
+    "publisherFirstPartyId": "disabled"
+  },
+  "releaseGates": [
+    "production-admob-ids",
+    "operatorx-publisher-id-only",
+    "no-test-ids-in-release",
+    "ump-before-att-and-ad-request",
+    "att-before-google-mobile-ads",
+    "app-privacy-aligned",
+    "apple-4.3-recheck",
+    "fr-en-screenshots",
+    "iphone-ipad-qa",
+    "app-ads-txt-live"
+  ],
+  "website": "https://operatorx-tanktime.vercel.app/"
 }
