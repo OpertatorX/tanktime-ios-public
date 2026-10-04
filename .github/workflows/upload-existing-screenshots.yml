@@ -2,6 +2,10 @@ name: Upload Existing App Store Screenshots
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/upload-existing-screenshots.yml'
 
 permissions:
   actions: read
