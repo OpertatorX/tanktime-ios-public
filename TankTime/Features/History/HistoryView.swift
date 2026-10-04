@@ -120,7 +120,7 @@ struct HistoryView: View {
     private func delete(_ item: FuelCalculation) {
         guard let index = store.history.firstIndex(where: { $0.id == item.id }) else { return }
         withAnimation(.snappy(duration: 0.25)) {
-            store.deleteHistory(IndexSet(integer: index))
+            store.deleteHistory(at: IndexSet(integer: index))
         }
     }
 
