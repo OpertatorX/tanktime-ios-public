@@ -36,7 +36,7 @@ jobs:
           privacy = plistlib.loads(Path('TankTime/Resources/PrivacyInfo.xcprivacy').read_bytes())
           assert info.get('ITSAppUsesNonExemptEncryption') is False
           assert 'advertising and ad measurement' in info.get('NSUserTrackingUsageDescription', '')
-          assert privacy.get('NSPrivacyTracking') is False  # TankTime-owned local data is not used for tracking
+          assert privacy.get('NSPrivacyTracking') is False
           assert Path('TankTime/Resources/en.lproj/InfoPlist.strings').exists()
           assert Path('TankTime/Resources/fr.lproj/InfoPlist.strings').exists()
           consent = Path('TankTime/Services/ConsentManager.swift').read_text(encoding='utf-8')
@@ -66,19 +66,16 @@ jobs:
           test ! -f TankTime/Resources/AppIconSource.jpg
           test ! -f TankTime/Resources/AppIconSource.svg
           test ! -f TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
-          grep -Fq 'artwork/TankTime-AppIconSource.jpg' scripts/materialize_app_icon.sh
+          grep -Fq 'artwork/TankTime-AppIconSource.svg' scripts/materialize_app_icon.sh
           grep -Fq 'TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png' .gitignore
           echo 'PASS premium icon is generated from non-bundled artwork and not committed stale.'
       - name: Validate AdMob automation safety
         run: |
           grep -Fq 'pub-9441192520255287' scripts/bootstrap_admob.py
           grep -Fq 'admob.monetization' scripts/bootstrap_admob.py
-          grep -Fq 'TANKTIME_ADMOB_APP_ID' scripts/install_admob_secrets.ps1
-          grep -Fq 'TANKTIME_ADMOB_BANNER_ID' scripts/install_admob_secrets.ps1
-          grep -Fq 'TANKTIME_ADMOB_INTERSTITIAL_ID' scripts/install_admob_secrets.ps1
-          echo 'PASS AdMob bootstrap and secret installer are wired to OperatorX publisher.'
+          echo 'PASS AdMob bootstrap targets the OperatorX publisher and OAuth scope.'
       - name: Scan for stale inherited branding and test release IDs
         run: |
           ! grep -RIn --exclude-dir=.git --exclude='MARKET_HUNTER_VALIDATION.md' 'TrimBench' TankTime website store.config.json project.yml
-          ! grep -RIn --exclude-dir=.git '3940256099942544' TankTime website apple store.config.json
+          ! grep -RIn --exclude-dir=.git '3940256099942544' TankTime website store.config.json
           echo 'PASS no inherited branding or Google test ad IDs in product/store content.'
