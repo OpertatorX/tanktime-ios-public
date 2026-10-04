@@ -1,0 +1,84 @@
+name: Static Release Audit
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON metadata
+        run: |
+          python3 -m json.tool app.json >/dev/null
+          python3 -m json.tool eas.json >/dev/null
+          python3 -m json.tool store.config.json >/dev/null
+          python3 -m json.tool app.operatorx.json >/dev/null
+      - name: Validate Python release automation
+        run: |
+          python3 -m py_compile scripts/render_store_screens.py
+          python3 -m py_compile scripts/upload_appstore_screenshots.py
+          python3 -m py_compile scripts/select_build_and_submit.py
+          python3 -m py_compile scripts/bootstrap_admob.py
+      - name: Validate shell release automation
+        run: |
+          bash -n scripts/materialize_app_icon.sh
+          bash -n scripts/preflight_ads_release.sh
+      - name: Validate plist and privacy posture
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+          info = plistlib.loads(Path('TankTime/Info.plist').read_bytes())
+          privacy = plistlib.loads(Path('TankTime/Resources/PrivacyInfo.xcprivacy').read_bytes())
+          assert info.get('ITSAppUsesNonExemptEncryption') is False
+          assert 'advertising and ad measurement' in info.get('NSUserTrackingUsageDescription', '')
+          assert privacy.get('NSPrivacyTracking') is False  # TankTime-owned local data is not used for tracking
+          assert Path('TankTime/Resources/en.lproj/InfoPlist.strings').exists()
+          assert Path('TankTime/Resources/fr.lproj/InfoPlist.strings').exists()
+          consent = Path('TankTime/Services/ConsentManager.swift').read_text(encoding='utf-8')
+          assert 'import AppTrackingTransparency' in consent
+          assert 'requestTrackingAuthorization' in consent
+          items = info.get('SKAdNetworkItems', [])
+          assert len(items) >= 50, len(items)
+          assert len({x['SKAdNetworkIdentifier'] for x in items}) == len(items)
+          print(f'PASS plist/privacy: {len(items)} unique SKAdNetwork IDs')
+          PY
+      - name: Validate localization parity
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          def keys(path):
+              text = Path(path).read_text(encoding='utf-8-sig')
+              return set(re.findall(r'^\s*"((?:[^"\\]|\\.)*)"\s*=', text, flags=re.M))
+          en = keys('TankTime/Resources/en.lproj/Localizable.strings')
+          fr = keys('TankTime/Resources/fr.lproj/Localizable.strings')
+          assert en == fr, f'localization mismatch: en-only={sorted(en-fr)}, fr-only={sorted(fr-en)}'
+          print(f'PASS localization parity: {len(en)} keys')
+          PY
+      - name: Validate premium icon source isolation
+        run: |
+          test -f artwork/TankTime-AppIconSource.jpg
+          test ! -f TankTime/Resources/AppIconSource.jpg
+          test ! -f TankTime/Resources/AppIconSource.svg
+          test ! -f TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+          grep -Fq 'artwork/TankTime-AppIconSource.jpg' scripts/materialize_app_icon.sh
+          grep -Fq 'TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png' .gitignore
+          echo 'PASS premium icon is generated from non-bundled artwork and not committed stale.'
+      - name: Validate AdMob automation safety
+        run: |
+          grep -Fq 'pub-9441192520255287' scripts/bootstrap_admob.py
+          grep -Fq 'admob.monetization' scripts/bootstrap_admob.py
+          grep -Fq 'TANKTIME_ADMOB_APP_ID' scripts/install_admob_secrets.ps1
+          grep -Fq 'TANKTIME_ADMOB_BANNER_ID' scripts/install_admob_secrets.ps1
+          grep -Fq 'TANKTIME_ADMOB_INTERSTITIAL_ID' scripts/install_admob_secrets.ps1
+          echo 'PASS AdMob bootstrap and secret installer are wired to OperatorX publisher.'
+      - name: Scan for stale inherited branding and test release IDs
+        run: |
+          ! grep -RIn --exclude-dir=.git --exclude='MARKET_HUNTER_VALIDATION.md' 'TrimBench' TankTime website apple store.config.json project.yml
+          ! grep -RIn --exclude-dir=.git '3940256099942544' TankTime website apple store.config.json
+          echo 'PASS no inherited branding or Google test ad IDs in product/store content.'

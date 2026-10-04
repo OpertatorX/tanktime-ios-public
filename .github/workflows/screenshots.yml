@@ -1,0 +1,108 @@
+name: App Store Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/screenshots.yml'
+      - 'scripts/render_store_screens.py'
+      - 'scripts/upload_appstore_screenshots.py'
+      - 'TankTime/**'
+      - 'artwork/**'
+
+jobs:
+  capture:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: brew install xcodegen imagemagick
+      - name: Materialize premium TankTime icon
+        run: bash scripts/materialize_app_icon.sh
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build simulator app
+        run: |
+          xcodebuild \
+            -project TankTime.xcodeproj \
+            -scheme TankTime \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$PWD/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO TANKTIME_ADMOB_APP_ID='ca-app-pub-3940256099942544~1458002511' TANKTIME_ADMOB_BANNER_ID='ca-app-pub-3940256099942544/2934735716' TANKTIME_ADMOB_INTERSTITIAL_ID='ca-app-pub-3940256099942544/4411468910' build
+      - name: Select devices
+        id: devices
+        run: |
+          DEVICES=$(xcrun simctl list devices available -j)
+          IPHONE=$(echo "$DEVICES" | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; a=[x for r in d.values() for x in r if x.get("isAvailable") and x.get("name","").startswith("iPhone")]; p=[x for x in a if "Pro Max" in x["name"]]; print((p or a)[-1]["udid"])')
+          IPAD=$(echo "$DEVICES" | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; a=[x for r in d.values() for x in r if x.get("isAvailable") and x.get("name","").startswith("iPad")]; p=[x for x in a if "13-inch" in x["name"]]; print((p or a)[-1]["udid"])')
+          echo "iphone=$IPHONE" >> "$GITHUB_OUTPUT"
+          echo "ipad=$IPAD" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices | grep -E "$IPHONE|$IPAD" || true
+      - name: Boot and install
+        run: |
+          APP="$PWD/DerivedData/Build/Products/Release-iphonesimulator/TankTime.app"
+          for UDID in '${{ steps.devices.outputs.iphone }}' '${{ steps.devices.outputs.ipad }}'; do
+            xcrun simctl boot "$UDID" || true
+            xcrun simctl bootstatus "$UDID" -b
+            xcrun simctl install "$UDID" "$APP"
+          done
+      - name: Capture real app screens
+        run: |
+          mkdir -p screenshots/en-US/iphone screenshots/fr-FR/iphone screenshots/en-US/ipad screenshots/fr-FR/ipad
+          capture () {
+            UDID="$1"; LOCALE="$2"; LANG="$3"; UNITS="$4"; OUT="$5"
+            for SCREEN in calculate plan tanks history settings; do
+              xcrun simctl terminate "$UDID" com.operatorx.tanktime || true
+              xcrun simctl launch "$UDID" com.operatorx.tanktime -AppleLanguages "($LANG)" -AppleLocale "$LOCALE" "-screenshotMode=1" "-units=$UNITS" "-screen=$SCREEN"
+              sleep 1.5
+              xcrun simctl io "$UDID" screenshot "$OUT/$SCREEN.png"
+            done
+          }
+          capture '${{ steps.devices.outputs.iphone }}' 'en_US' 'en' 'imperial' 'screenshots/en-US/iphone'
+          capture '${{ steps.devices.outputs.iphone }}' 'fr_FR' 'fr' 'metric' 'screenshots/fr-FR/iphone'
+          capture '${{ steps.devices.outputs.ipad }}' 'en_US' 'en' 'imperial' 'screenshots/en-US/ipad'
+          capture '${{ steps.devices.outputs.ipad }}' 'fr_FR' 'fr' 'metric' 'screenshots/fr-FR/ipad'
+      - name: Record raw dimensions
+        run: |
+          find screenshots -name '*.png' -print0 | while IFS= read -r -d '' file; do
+            echo "$file"
+            sips -g pixelWidth -g pixelHeight "$file" | tail -n +2
+          done
+      - name: Render professional store screenshots
+        run: |
+          python3 -m venv .venv-screens
+          .venv-screens/bin/pip install --quiet pillow
+          .venv-screens/bin/python scripts/render_store_screens.py
+          test "$(find screenshots-promo -name '*.png' | wc -l | tr -d ' ')" -eq 20
+      - name: Record promo dimensions
+        run: |
+          find screenshots-promo -name '*.png' -print0 | while IFS= read -r -d '' file; do
+            echo "$file"
+            sips -g pixelWidth -g pixelHeight "$file" | tail -n +2
+          done
+      - name: Upload screenshots to App Store Connect when configured
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+          ASC_APP_ID: '6818814141'
+          ASC_VERSION: '1.0'
+        run: |
+          set -euo pipefail
+          if [[ -z "${ASC_KEY_ID:-}" || -z "${ASC_ISSUER_ID:-}" || -z "${ASC_API_KEY_BASE64:-}" ]]; then
+            echo 'ASC API secrets are not installed yet; screenshot upload is safely skipped.'
+            exit 0
+          fi
+          .venv-screens/bin/pip install --quiet requests pyjwt cryptography
+          .venv-screens/bin/python scripts/upload_appstore_screenshots.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tanktime-app-store-screenshots
+          path: |
+            screenshots
+            screenshots-promo
+          retention-days: 14

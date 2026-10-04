@@ -1,0 +1,94 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.0",
+    "copyright": "2026 OperatorX",
+    "release": {
+      "automaticRelease": true
+    },
+    "info": {
+      "en-US": {
+        "title": "TankTime: Propane Planner",
+        "subtitle": "Propane level & runtime",
+        "description": "TankTime turns a simple scale reading into a practical propane plan.\n\nWEIGH YOUR CYLINDER\nEnter the current scale weight and your tank's tare weight. TankTime estimates how much propane remains and the tank fill percentage.\n\nESTIMATE RUNTIME\nChoose an appliance preset or enter its BTU-per-hour rating. TankTime calculates an estimated runtime from the fuel remaining.\n\nPLAN MULTIPLE APPLIANCES\nCombine several propane appliances, set hours per day, trip length and a reserve target. TankTime estimates daily burn, total fuel required and how many additional full cylinders you may need from your current tank.\n\nSAVE YOUR SETUPS\nKeep tank profiles and calculation history on your device. Built-in appliance presets stay ready for quick repeat checks.\n\nSHARE RESULTS\nShare runtime and fuel-plan summaries when preparing a cookout, RV trip, campsite, patio-heater session or backup-power setup.\n\nNO SENSOR REQUIRED\nTankTime works from information you enter. No Bluetooth accessory, proprietary tank sensor, account or subscription is required.\n\nTankTime is a planning tool. Results are estimates and can vary with temperature, appliance efficiency, duty cycle, regulator behavior and real-world operating conditions. Always follow cylinder and appliance safety instructions.",
+        "keywords": [
+          "propane",
+          "tank",
+          "LPG",
+          "runtime",
+          "grill",
+          "RV",
+          "heater",
+          "camping",
+          "generator",
+          "fuel",
+          "cylinder",
+          "BTU"
+        ],
+        "marketingUrl": "https://operatorx-tanktime.vercel.app/",
+        "promoText": "Know how much propane is left, estimate runtime and plan a multi-appliance trip from the fuel already in your cylinder.",
+        "supportUrl": "https://operatorx-tanktime.vercel.app/support.html",
+        "privacyPolicyUrl": "https://operatorx-tanktime.vercel.app/privacy.html"
+      },
+      "fr-FR": {
+        "title": "TankTime : Plan Propane",
+        "subtitle": "Autonomie gaz propane",
+        "description": "TankTime transforme une simple pesée de bouteille en plan pratique pour votre propane.\n\nPESEZ VOTRE BOUTEILLE\nSaisissez le poids actuel sur la balance et le poids à vide de la bouteille. TankTime estime la quantité de propane restante et le pourcentage de remplissage.\n\nESTIMEZ L’AUTONOMIE\nChoisissez un appareil prédéfini ou saisissez sa consommation. TankTime calcule l’autonomie estimée à partir du gaz restant.\n\nPLANIFIEZ PLUSIEURS APPAREILS\nCombinez plusieurs appareils au propane, indiquez leurs heures d’utilisation par jour, la durée du séjour et une réserve. TankTime estime la consommation quotidienne, le gaz total nécessaire et le nombre de bouteilles supplémentaires à prévoir à partir de votre bouteille actuelle.\n\nENREGISTREZ VOS CONFIGURATIONS\nConservez vos bouteilles et historiques de calcul directement sur votre appareil. Les appareils prédéfinis restent disponibles pour vos prochains calculs.\n\nPARTAGEZ LES RÉSULTATS\nPartagez un résumé de l’autonomie ou du plan de gaz pour préparer un barbecue, un voyage en camping-car, du camping, un chauffage de terrasse ou une installation de secours.\n\nAUCUN CAPTEUR NÉCESSAIRE\nTankTime fonctionne avec les informations que vous saisissez. Aucun accessoire Bluetooth, capteur propriétaire, compte ou abonnement n’est nécessaire.\n\nTankTime est un outil de planification. Les résultats sont des estimations pouvant varier selon la température, le rendement de l’appareil, le cycle de fonctionnement, le détendeur et les conditions réelles d’utilisation. Respectez toujours les consignes de sécurité de la bouteille et de l’appareil.",
+        "keywords": [
+          "propane",
+          "bouteille",
+          "gaz",
+          "GPL",
+          "autonomie",
+          "barbecue",
+          "camping",
+          "chauffage",
+          "groupe",
+          "carburant",
+          "BTU"
+        ],
+        "marketingUrl": "https://operatorx-tanktime.vercel.app/fr.html",
+        "promoText": "Estimez le propane restant, l’autonomie et le gaz nécessaire pour plusieurs appareils pendant votre séjour — sans capteur.",
+        "supportUrl": "https://operatorx-tanktime.vercel.app/support-fr.html",
+        "privacyPolicyUrl": "https://operatorx-tanktime.vercel.app/privacy-fr.html"
+      }
+    },
+    "categories": [
+      "UTILITIES",
+      "LIFESTYLE"
+    ],
+    "advisory": {
+      "ageRatingOverride": "NONE",
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gambling": false,
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "kidsAgeBand": null,
+      "koreaAgeRatingOverride": "NONE",
+      "lootBox": false,
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "unrestrictedWebAccess": false,
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "advertising": true,
+      "ageAssurance": false,
+      "ageRatingOverrideV2": "NONE",
+      "developerAgeRatingInfoUrl": null,
+      "gunsOrOtherWeapons": "NONE",
+      "healthOrWellnessTopics": false,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false
+    },
+    "review": {
+      "demoRequired": false,
+      "notes": "TankTime requires no account, login, subscription or external hardware.\n\nMain calculator: open Calculate, use the default 20 lb cylinder, enter a current scale weight above the tare weight, select an appliance preset such as Gas grill, then calculate runtime. Saving stores the result locally in History.\n\nTrip planning: open Plan, select a saved cylinder, enter its current scale weight, set trip length and reserve percentage, enable one or more appliances with hours/day, then build the fuel plan.\n\nResults are planning estimates. The app contains advertising through Google Mobile Ads and uses Google UMP for required consent UI."
+    }
+  }
+}

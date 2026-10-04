@@ -1,0 +1,79 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: brew install xcodegen imagemagick
+      - name: Materialize original TankTime icon
+        run: bash scripts/materialize_app_icon.sh
+      - name: Generate project
+        run: xcodegen generate
+      - name: Debug simulator build
+        run: |
+          xcodebuild \
+            -project TankTime.xcodeproj \
+            -scheme TankTime \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$PWD/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Release compile check
+        run: |
+          xcodebuild \
+            -project TankTime.xcodeproj \
+            -scheme TankTime \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$PWD/DerivedDataRelease" \
+            CODE_SIGNING_ALLOWED=NO \
+            TANKTIME_ADMOB_APP_ID='ca-app-pub-3940256099942544~1458002511' \
+            TANKTIME_ADMOB_BANNER_ID='ca-app-pub-3940256099942544/2934735716' \
+            TANKTIME_ADMOB_INTERSTITIAL_ID='ca-app-pub-3940256099942544/4411468910' \
+            build
+      - name: Validate privacy, ads and bundled resources
+        run: |
+          set -euo pipefail
+          APP="$PWD/DerivedData/Build/Products/Debug-iphonesimulator/TankTime.app"
+          test -f "$APP/en.lproj/Localizable.strings"
+          test -f "$APP/fr.lproj/Localizable.strings"
+          test -f "$APP/PrivacyInfo.xcprivacy"
+          /usr/libexec/PlistBuddy -c 'Print ITSAppUsesNonExemptEncryption' TankTime/Info.plist | grep -qx false
+          /usr/libexec/PlistBuddy -c 'Print NSUserTrackingUsageDescription' TankTime/Info.plist | grep -Fq 'advertising and ad measurement'
+          test -f "$APP/en.lproj/InfoPlist.strings"
+          test -f "$APP/fr.lproj/InfoPlist.strings"
+          grep -Fq 'import AppTrackingTransparency' TankTime/Services/ConsentManager.swift
+          grep -Fq 'requestTrackingAuthorization' TankTime/Services/ConsentManager.swift
+          plutil -extract NSPrivacyTracking raw TankTime/Resources/PrivacyInfo.xcprivacy | grep -qx false
+          grep -Fq 'publisherPrivacyPersonalizationState = .disabled' TankTime/Services/AdsCoordinator.swift
+          grep -Fq 'setPublisherFirstPartyIDEnabled(false)' TankTime/Services/AdsCoordinator.swift
+          SK_COUNT=$(/usr/libexec/PlistBuddy -c 'Print SKAdNetworkItems' TankTime/Info.plist | grep -c 'Dict')
+          test "$SK_COUNT" -ge 50
+          ICON_SHA=$(shasum -a 256 TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png | awk '{print toupper($1)}')
+          test "$ICON_SHA" != '59D21284BBD7CB67ED017022D62A742BBB74A01D9DE0EC67F99C2BAAABAA69D7'
+          echo "Privacy/ATT posture, non-personalized ads, SKAdNetwork list and original icon validated."
+      - name: Pick simulator
+        id: simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; ids=[x["udid"] for runtime in d.values() for x in runtime if x.get("isAvailable") and x.get("name","").startswith("iPhone")]; print(ids[0])')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Unit tests
+        run: |
+          xcodebuild \
+            -project TankTime.xcodeproj \
+            -scheme TankTime \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}' \
+            -derivedDataPath "$PWD/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            test

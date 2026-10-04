@@ -1,0 +1,21 @@
+name: Generate Xcode Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: brew install xcodegen imagemagick
+      - name: Materialize premium TankTime icon
+        run: bash scripts/materialize_app_icon.sh
+      - name: Generate project
+        run: xcodegen generate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TankTime-xcodeproj
+          path: TankTime.xcodeproj
+          retention-days: 1

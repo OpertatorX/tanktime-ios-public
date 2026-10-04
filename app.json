@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "TankTime: Propane Planner",
+    "slug": "tanktime",
+    "owner": "operatorx",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "com.operatorx.tanktime",
+      "buildNumber": "1",
+      "supportsTablet": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4f12f7f8-b8f3-4dc8-a108-eeff7eaebb83"
+      }
+    }
+  }
+}
