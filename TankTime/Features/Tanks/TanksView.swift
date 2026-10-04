@@ -123,7 +123,7 @@ struct TanksView: View {
     private func delete(_ tank: TankProfile) {
         guard let index = store.tanks.firstIndex(where: { $0.id == tank.id }) else { return }
         withAnimation(.snappy(duration: 0.25)) {
-            store.deleteTank(IndexSet(integer: index))
+            store.deleteTank(at: IndexSet(integer: index))
         }
     }
 
