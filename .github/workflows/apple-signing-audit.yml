@@ -1,0 +1,24 @@
+name: Apple Signing API Audit
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require ASC credentials
+        run: |
+          test -n "$ASC_KEY_ID"
+          test -n "$ASC_ISSUER_ID"
+          test -n "$ASC_API_KEY_BASE64"
+      - name: Install dependencies
+        run: python3 -m pip install --quiet requests pyjwt cryptography
+      - name: Audit Apple provisioning API
+        run: python3 scripts/audit_apple_signing_api.py
