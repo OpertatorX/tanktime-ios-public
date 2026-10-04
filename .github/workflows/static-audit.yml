@@ -23,6 +23,7 @@ jobs:
           python3 -m py_compile scripts/upload_appstore_screenshots.py
           python3 -m py_compile scripts/select_build_and_submit.py
           python3 -m py_compile scripts/bootstrap_admob.py
+          python3 -m py_compile scripts/apple_ephemeral_signing.py
       - name: Validate shell release automation
         run: |
           bash -n scripts/materialize_app_icon.sh

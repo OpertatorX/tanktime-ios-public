@@ -32,3 +32,6 @@ jobs:
         run: python3 -m pip install --quiet requests pyjwt cryptography
       - name: Select processed build and finalize
         run: python3 scripts/select_build_and_submit.py
+      - name: Cleanup ephemeral signing assets
+        if: success()
+        run: python3 scripts/apple_ephemeral_signing.py cleanup

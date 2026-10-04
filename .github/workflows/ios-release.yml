@@ -10,6 +10,9 @@ jobs:
     env:
       BUNDLE_ID: com.operatorx.tanktime
       TEAM_ID: 67ZL6VYTQ8
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
       TANKTIME_ADMOB_APP_ID: ${{ secrets.TANKTIME_ADMOB_APP_ID }}
       TANKTIME_ADMOB_BANNER_ID: ${{ secrets.TANKTIME_ADMOB_BANNER_ID }}
       TANKTIME_ADMOB_INTERSTITIAL_ID: ${{ secrets.TANKTIME_ADMOB_INTERSTITIAL_ID }}
@@ -23,29 +26,32 @@ jobs:
         run: xcodegen generate
       - name: Preflight release gates
         run: bash scripts/preflight_ads_release.sh
-      - name: Install signing credentials
-        env:
-          P12_BASE64: ${{ secrets.APPLE_DIST_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.APPLE_DIST_P12_PASSWORD }}
-          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+      - name: Install signing API dependencies
+        run: python3 -m pip install --quiet requests pyjwt cryptography
+      - name: Create ephemeral Apple signing assets
         run: |
           set -euo pipefail
-          test -n "$P12_BASE64" && test -n "$PROFILE_BASE64"
+          test -n "$ASC_KEY_ID" && test -n "$ASC_ISSUER_ID" && test -n "$ASC_API_KEY_BASE64"
+          mkdir -p "$RUNNER_TEMP/signing"
+          openssl genrsa -out "$RUNNER_TEMP/tanktime-signing.key" 2048
+          openssl req -new -key "$RUNNER_TEMP/tanktime-signing.key" -out "$RUNNER_TEMP/tanktime.csr" -subj '/CN=TankTime CI/O=OperatorX/C=FR'
+          python3 scripts/apple_ephemeral_signing.py prepare --csr "$RUNNER_TEMP/tanktime.csr" --out-dir "$RUNNER_TEMP/signing"
+          openssl x509 -inform DER -in "$RUNNER_TEMP/signing/distribution.cer" -out "$RUNNER_TEMP/signing/distribution.pem"
+          P12_PASSWORD="$(uuidgen)"
+          openssl pkcs12 -export -out "$RUNNER_TEMP/distribution.p12" -inkey "$RUNNER_TEMP/tanktime-signing.key" -in "$RUNNER_TEMP/signing/distribution.pem" -password "pass:$P12_PASSWORD"
           KEYCHAIN="$RUNNER_TEMP/tanktime.keychain-db"
           KEYCHAIN_PASSWORD="$(uuidgen)"
-          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security import "$RUNNER_TEMP/distribution.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
-          echo "$PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/TankTime.mobileprovision"
-          security cms -D -i "$RUNNER_TEMP/TankTime.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+          security cms -D -i "$RUNNER_TEMP/signing/TankTime.mobileprovision" > "$RUNNER_TEMP/profile.plist"
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$RUNNER_TEMP/TankTime.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          cp "$RUNNER_TEMP/signing/TankTime.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
           echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
       - name: Archive
@@ -126,6 +132,10 @@ jobs:
           echo "$ASC_API_KEY_BASE64" | base64 --decode > "$KEY"
           IPA=$(find "$PWD/artifacts/export" -name '*.ipa' -print -quit)
           xcrun altool --upload-app --type ios --file "$IPA" --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+      - name: Cleanup ephemeral signing assets after failure
+        if: failure()
+        continue-on-error: true
+        run: python3 scripts/apple_ephemeral_signing.py cleanup
       - uses: actions/upload-artifact@v4
         if: always()
         with:
