@@ -21,60 +21,167 @@ struct CalculatorView: View {
 
     private var isMetric: Bool { store.unitSystem == .metric }
     private var weightUnit: String { isMetric ? "kg" : "lb" }
-    private var weightLabel: String { "\(String(localized: "Current scale weight")) (\(weightUnit))" }
-    private var powerLabel: String { isMetric ? "\(String(localized: "Power override")) (kW)" : String(localized: "BTU per hour (optional override)") }
+    private var powerUnit: String { isMetric ? "kW" : "BTU/h" }
 
     var body: some View {
-        Form {
-            Section("Tank") {
-                Picker("Cylinder", selection: $selectedTankID) {
-                    ForEach(store.tanks) { tank in
-                        Text(tank.name).tag(Optional(tank.id))
+        ScrollView {
+            VStack(spacing: 18) {
+                PremiumPageHeader(
+                    eyebrow: "TankTime",
+                    title: "Know what your tank can do",
+                    subtitle: "Fast runtime estimates without the spreadsheet feel.",
+                    symbol: "flame.fill"
+                )
+                .padding(.bottom, 4)
+
+                tankCard
+                applianceCard
+
+                PrimaryActionButton(
+                    title: "Calculate runtime",
+                    symbol: "arrow.right"
+                ) {
+                    withAnimation(.snappy(duration: 0.35)) {
+                        calculate()
                     }
                 }
-                numericRow(weightLabel, text: $scaleWeight, placeholder: "0")
-            }
 
-            Section("Appliance") {
-                Picker("Preset", selection: $selectedApplianceID) {
-                    ForEach(store.appliances) { appliance in
-                        Label(appliance.localizedName, systemImage: appliance.symbol)
-                            .tag(Optional(appliance.id))
-                    }
+                if let result {
+                    ResultCard(result: result, onSave: saveResult)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                numericRow(powerLabel, text: $customPower, placeholder: "—")
-                numericRow(String(localized: "Hours used per day"), text: $hoursPerDay, placeholder: "0")
             }
-
-            Section {
-                Button(action: calculate) {
-                    Label("Calculate runtime", systemImage: "equal.circle.fill")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-
-            if let result {
-                ResultCard(result: result, onSave: saveResult)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-            }
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
+            .padding(.bottom, 24)
         }
-        .navigationTitle("TankTime")
+        .scrollIndicators(.hidden)
+        .background(AppTheme.backdrop.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: prepareInitialState)
     }
 
-    private func numericRow(_ title: String, text: Binding<String>, placeholder: String) -> some View {
-        HStack(spacing: 16) {
-            Text(title)
-                .foregroundStyle(.primary)
-            Spacer(minLength: 12)
-            TextField(placeholder, text: text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .frame(minWidth: 72, maxWidth: 150)
-                .accessibilityLabel(title)
+    private var tankCard: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 16) {
+                PremiumSectionTitle(title: "Tank", caption: "Starting point")
+
+                Menu {
+                    ForEach(store.tanks) { option in
+                        Button {
+                            selectedTankID = option.id
+                        } label: {
+                            if option.id == tank?.id {
+                                Label(option.name, systemImage: "checkmark")
+                            } else {
+                                Text(option.name)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 13) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .fill(AppTheme.accent.opacity(0.12))
+                            Image(systemName: "cylinder.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .frame(width: 42, height: 42)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Cylinder")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Text(tank?.name ?? String(localized: "Standard cylinder"))
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .padding(12)
+                    .background(AppTheme.background.opacity(0.58), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                PremiumTextField(
+                    title: "Current scale weight",
+                    text: $scaleWeight,
+                    placeholder: "0",
+                    suffix: weightUnit
+                )
+            }
+        }
+    }
+
+    private var applianceCard: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 16) {
+                PremiumSectionTitle(title: "Appliance", caption: "Daily use")
+
+                Menu {
+                    ForEach(store.appliances) { option in
+                        Button {
+                            selectedApplianceID = option.id
+                        } label: {
+                            Label(option.localizedName, systemImage: option.symbol)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 13) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .fill(Color.white.opacity(0.07))
+                            Image(systemName: appliance?.symbol ?? "flame")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
+                        .frame(width: 42, height: 42)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Preset")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(AppTheme.textSecondary)
+                            Text(appliance?.localizedName ?? "—")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppTheme.textPrimary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .padding(12)
+                    .background(AppTheme.background.opacity(0.58), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(AppTheme.border, lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                HStack(alignment: .top, spacing: 12) {
+                    PremiumTextField(
+                        title: "Power override",
+                        text: $customPower,
+                        placeholder: "—",
+                        suffix: powerUnit
+                    )
+                    PremiumTextField(
+                        title: "Hours used per day",
+                        text: $hoursPerDay,
+                        placeholder: "0",
+                        suffix: "h"
+                    )
+                }
+            }
         }
     }
 
@@ -156,50 +263,103 @@ private struct ResultCard: View {
     let result: ResultSnapshot
     let onSave: () -> Void
 
-    var shareText: String {
+    private var shareText: String {
         "TankTime — \(result.tank.name): \(result.fuelDisplay) remaining, about \(result.runtimeHours.formatted(.number.precision(.fractionLength(1)))) hours with \(result.appliance.localizedName)."
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Estimated runtime").font(.subheadline).foregroundStyle(.secondary)
-                    Text("\(result.runtimeHours.formatted(.number.precision(.fractionLength(1)))) h")
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
+        PremiumCard(padding: 20) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .center, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Estimated runtime")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .tracking(0.7)
+                            .textCase(.uppercase)
+                            .foregroundStyle(AppTheme.textSecondary)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(result.runtimeHours.formatted(.number.precision(.fractionLength(1))))
+                                .font(.system(size: 46, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppTheme.textPrimary)
+                            Text("h")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                    }
+                    Spacer()
+                    FuelRing(progress: result.fillFraction)
                 }
-                Spacer()
-                Gauge(value: result.fillFraction) { EmptyView() }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint(Color(red: 0.78, green: 0.49, blue: 0.18))
-            }
-            HStack {
-                metric("Fuel left", result.fuelDisplay)
-                Spacer()
-                metric("Tank", "\((result.fillFraction * 100).formatted(.number.precision(.fractionLength(0))))%")
-                Spacer()
-                metric("At usage", "\(result.daysAtUsage.formatted(.number.precision(.fractionLength(1)))) days")
-            }
-            HStack {
-                Button("Save result", action: onSave)
-                    .buttonStyle(.borderedProminent)
-                ShareLink(item: shareText) {
-                    Label("Share", systemImage: "square.and.arrow.up")
+
+                PremiumDivider()
+
+                HStack(spacing: 10) {
+                    MetricTile(title: "Fuel left", value: result.fuelDisplay, symbol: "drop.fill")
+                    MetricTile(
+                        title: "Tank",
+                        value: "\((result.fillFraction * 100).formatted(.number.precision(.fractionLength(0))))%",
+                        symbol: "cylinder.fill"
+                    )
+                    MetricTile(
+                        title: "At usage",
+                        value: "\(result.daysAtUsage.formatted(.number.precision(.fractionLength(1)))) d",
+                        symbol: "calendar"
+                    )
                 }
-                .buttonStyle(.bordered)
+
+                HStack(spacing: 10) {
+                    Button(action: onSave) {
+                        Label("Save result", systemImage: "bookmark.fill")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .background(AppTheme.accentGradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+
+                    ShareLink(item: shareText) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                            .frame(width: 48, height: 48)
+                            .foregroundStyle(AppTheme.textPrimary)
+                            .background(AppTheme.surfaceStrong, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    }
+                }
+
+                Text("Planning estimate only. Confirm appliance ratings and cylinder markings before use.")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(AppTheme.textSecondary)
             }
-            Text("Planning estimate only. Confirm appliance ratings and cylinder markings before use.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .padding(20)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+}
+
+private struct FuelRing: View {
+    let progress: Double
+
+    private var normalized: Double {
+        min(max(progress, 0), 1)
     }
 
-    private func metric(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(LocalizedStringKey(title)).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.headline)
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.08), lineWidth: 8)
+            Circle()
+                .trim(from: 0, to: normalized)
+                .stroke(AppTheme.accentGradient, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 1) {
+                Text("\((normalized * 100).formatted(.number.precision(.fractionLength(0))))")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.textPrimary)
+                Text("%")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.accent)
+            }
         }
+        .frame(width: 78, height: 78)
+        .accessibilityLabel("Tank fill")
+        .accessibilityValue("\((normalized * 100).formatted(.number.precision(.fractionLength(0)))) percent")
     }
 }
