@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum AppTab: Hashable, CaseIterable {
     case calculate, plan, tanks, history, settings
@@ -193,7 +194,7 @@ struct PremiumPageHeader: View {
 
 struct PremiumCard<Content: View>: View {
     var padding: CGFloat = 18
-    @ViewBuilder let content: Content
+    let content: Content
 
     init(padding: CGFloat = 18, @ViewBuilder content: () -> Content) {
         self.padding = padding
