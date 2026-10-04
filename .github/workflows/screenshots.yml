@@ -44,45 +44,99 @@ jobs:
           xcrun simctl list devices | grep -E "$IPHONE|$IPAD" || true
       - name: Boot and install
         run: |
+          set -euo pipefail
           APP="$PWD/DerivedData/Build/Products/Release-iphonesimulator/TankTime.app"
           for UDID in '${{ steps.devices.outputs.iphone }}' '${{ steps.devices.outputs.ipad }}'; do
             xcrun simctl boot "$UDID" || true
             xcrun simctl bootstatus "$UDID" -b
             xcrun simctl install "$UDID" "$APP"
           done
-      - name: Capture real app screens
+      - name: Capture real app screens with blank-screen protection
         run: |
+          set -euo pipefail
           mkdir -p screenshots/en-US/iphone screenshots/fr-FR/iphone screenshots/en-US/ipad screenshots/fr-FR/ipad
+
+          is_blank () {
+            FILE="$1"
+            read -r MEAN STDDEV <<< "$(magick "$FILE" -colorspace Gray -format '%[fx:mean] %[fx:standard_deviation]' info:)"
+            python3 - "$MEAN" "$STDDEV" <<'PY'
+          import sys
+          mean = float(sys.argv[1])
+          stddev = float(sys.argv[2])
+          print(f"image luminance mean={mean:.5f} stddev={stddev:.5f}")
+          sys.exit(0 if mean > 0.97 and stddev < 0.03 else 1)
+          PY
+          }
+
+          capture_screen () {
+            UDID="$1"; LOCALE="$2"; LANG="$3"; UNITS="$4"; OUT="$5"; SCREEN="$6"
+            FINAL="$OUT/$SCREEN.png"
+            TMP="$OUT/$SCREEN.tmp.png"
+            rm -f "$FINAL" "$TMP"
+
+            for ATTEMPT in 1 2 3; do
+              echo "Capture $SCREEN locale=$LOCALE attempt=$ATTEMPT"
+              xcrun simctl terminate "$UDID" com.operatorx.tanktime || true
+              sleep 0.4
+              xcrun simctl launch "$UDID" com.operatorx.tanktime \
+                -AppleLanguages "($LANG)" \
+                -AppleLocale "$LOCALE" \
+                "-screenshotMode=1" \
+                "-units=$UNITS" \
+                "-screen=$SCREEN"
+              sleep 3
+              xcrun simctl io "$UDID" screenshot "$TMP"
+              magick identify "$TMP" >/dev/null
+
+              if is_blank "$TMP"; then
+                echo "WARNING: blank/near-white screenshot detected for $SCREEN on attempt $ATTEMPT"
+                rm -f "$TMP"
+                sleep 1.5
+                continue
+              fi
+
+              mv "$TMP" "$FINAL"
+              echo "PASS: $FINAL"
+              return 0
+            done
+
+            echo "ERROR: failed to obtain a non-blank screenshot for $SCREEN locale=$LOCALE after 3 attempts" >&2
+            return 41
+          }
+
           capture () {
             UDID="$1"; LOCALE="$2"; LANG="$3"; UNITS="$4"; OUT="$5"
             for SCREEN in calculate plan tanks history settings; do
-              xcrun simctl terminate "$UDID" com.operatorx.tanktime || true
-              xcrun simctl launch "$UDID" com.operatorx.tanktime -AppleLanguages "($LANG)" -AppleLocale "$LOCALE" "-screenshotMode=1" "-units=$UNITS" "-screen=$SCREEN"
-              sleep 1.5
-              xcrun simctl io "$UDID" screenshot "$OUT/$SCREEN.png"
+              capture_screen "$UDID" "$LOCALE" "$LANG" "$UNITS" "$OUT" "$SCREEN"
             done
           }
+
           capture '${{ steps.devices.outputs.iphone }}' 'en_US' 'en' 'imperial' 'screenshots/en-US/iphone'
           capture '${{ steps.devices.outputs.iphone }}' 'fr_FR' 'fr' 'metric' 'screenshots/fr-FR/iphone'
           capture '${{ steps.devices.outputs.ipad }}' 'en_US' 'en' 'imperial' 'screenshots/en-US/ipad'
           capture '${{ steps.devices.outputs.ipad }}' 'fr_FR' 'fr' 'metric' 'screenshots/fr-FR/ipad'
-      - name: Record raw dimensions
+
+          test "$(find screenshots -name '*.png' | wc -l | tr -d ' ')" -eq 20
+      - name: Record raw dimensions and validate images
         run: |
+          set -euo pipefail
           find screenshots -name '*.png' -print0 | while IFS= read -r -d '' file; do
             echo "$file"
-            sips -g pixelWidth -g pixelHeight "$file" | tail -n +2
+            magick identify -format 'width=%w height=%h colorspace=%[colorspace]\n' "$file"
           done
       - name: Render professional store screenshots
         run: |
+          set -euo pipefail
           python3 -m venv .venv-screens
           .venv-screens/bin/pip install --quiet pillow
           .venv-screens/bin/python scripts/render_store_screens.py
           test "$(find screenshots-promo -name '*.png' | wc -l | tr -d ' ')" -eq 20
       - name: Record promo dimensions
         run: |
+          set -euo pipefail
           find screenshots-promo -name '*.png' -print0 | while IFS= read -r -d '' file; do
             echo "$file"
-            sips -g pixelWidth -g pixelHeight "$file" | tail -n +2
+            magick identify -format 'width=%w height=%h colorspace=%[colorspace]\n' "$file"
           done
       - name: Upload screenshots to App Store Connect when configured
         env:
