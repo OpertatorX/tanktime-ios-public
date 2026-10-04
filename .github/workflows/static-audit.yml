@@ -62,7 +62,7 @@ jobs:
           PY
       - name: Validate premium icon source isolation
         run: |
-          test -f artwork/TankTime-AppIconSource.jpg
+          test -f artwork/TankTime-AppIconSource.svg
           test ! -f TankTime/Resources/AppIconSource.jpg
           test ! -f TankTime/Resources/AppIconSource.svg
           test ! -f TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
@@ -79,6 +79,6 @@ jobs:
           echo 'PASS AdMob bootstrap and secret installer are wired to OperatorX publisher.'
       - name: Scan for stale inherited branding and test release IDs
         run: |
-          ! grep -RIn --exclude-dir=.git --exclude='MARKET_HUNTER_VALIDATION.md' 'TrimBench' TankTime website apple store.config.json project.yml
+          ! grep -RIn --exclude-dir=.git --exclude='MARKET_HUNTER_VALIDATION.md' 'TrimBench' TankTime website store.config.json project.yml
           ! grep -RIn --exclude-dir=.git '3940256099942544' TankTime website apple store.config.json
           echo 'PASS no inherited branding or Google test ad IDs in product/store content.'

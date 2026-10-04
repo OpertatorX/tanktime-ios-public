@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE="artwork/TankTime-AppIconSource.jpg"
+SOURCE="artwork/TankTime-AppIconSource.svg"
 OUTPUT="TankTime/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
 
 [[ -f "$SOURCE" ]] || { echo "ERROR: missing $SOURCE" >&2; exit 30; }
