@@ -13,6 +13,7 @@ API = "https://admob.googleapis.com/v1beta"
 PUBLISHER_ID = os.environ.get("ADMOB_PUBLISHER_ID", "pub-9441192520255287")
 ACCOUNT = f"accounts/{PUBLISHER_ID}"
 DISPLAY_NAME = os.environ.get("ADMOB_APP_DISPLAY_NAME", "TankTime")
+QUOTA_PROJECT = os.environ.get("GOOGLE_CLOUD_QUOTA_PROJECT", "").strip()
 OUT = Path(os.environ.get("ADMOB_OUTPUT_PATH", ".factory-private/tanktime-admob.json"))
 
 
@@ -55,7 +56,7 @@ def api(method: str, path: str, *, params=None, json_body=None, expected=(200, 2
         f"{API}{path}",
         params=params,
         json=json_body,
-        headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"},
+        headers={**{"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}, **({"x-goog-user-project": QUOTA_PROJECT} if QUOTA_PROJECT else {})},
         timeout=60,
     )
     if response.status_code not in expected:
@@ -179,3 +180,4 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         raise
+
